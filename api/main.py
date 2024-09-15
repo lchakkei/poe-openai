@@ -9,14 +9,11 @@ from fastapi import FastAPI, Request, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-import uvicorn
 from typing import AsyncGenerator
 import json
 
 from fastapi_poe.types import ProtocolMessage
 from fastapi_poe.client import get_bot_response
-
-from pyngrok import ngrok
 
 
 app = FastAPI()
@@ -58,6 +55,9 @@ async def generate_responses(api_key: str, formatted_messages: list, bot_name: s
 
     yield f"data: {json.dumps(response_template)}\n\ndata: [DONE]\n\n"
 
+@app.get("/")
+def read_root():
+    return {"Hello": "World"}
 
 @app.post("/v1/chat/completions")
 async def chat_completions(request: Request, authorization: str = Header(None)):
@@ -85,21 +85,3 @@ async def chat_completions(request: Request, authorization: str = Header(None)):
     # Stream responses back to the client
     # Wrap the streamed content to fit the desired response format
     return StreamingResponse(response_stream(), media_type="application/json")
-
-if __name__ == '__main__':
-    try:
-        import uvloop
-    except ImportError:
-        uvloop = None
-    if uvloop:
-        uvloop.install()
-
-    # Get your authtoken from https://dashboard.ngrok.com/get-started/your-authtoken
-    auth_token = "2lnKLs8QSYa4rK7XVeISSa1o1Ua_kYMV1g63niEeGZRodqiW"
-
-    # Set the authtoken
-    ngrok.set_auth_token(auth_token)
-    ngrok_tunnel = ngrok.connect(LISTEN_PORT)
-    print('Public URL:', ngrok_tunnel.public_url)
-    nest_asyncio.apply()
-    uvicorn.run(app, host="0.0.0.0", port=LISTEN_PORT)
