@@ -15,7 +15,10 @@ import json
 from fastapi_poe.types import ProtocolMessage
 from fastapi_poe.client import get_bot_response
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI()
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 @app.get("/")
 async def root():
