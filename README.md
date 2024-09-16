@@ -32,6 +32,7 @@ for chunk in completion:
 ## Limitations
 
 Does not currently support Vision or other advanced features
+
 Requires a Poe subscription
 
 ## Credits
