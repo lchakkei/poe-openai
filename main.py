@@ -37,7 +37,8 @@ async def generate_responses_completions(api_key: str, formatted_messages: list,
           {
             "text": "",
             "index": 0,
-            "finish_reason": "length"
+            "finish_reason": None,
+            "logprobs": None
           }
         ],
     }
@@ -48,7 +49,6 @@ async def generate_responses_completions(api_key: str, formatted_messages: list,
                                           logit_bias={'24383':-100}):
 
         # Fill the required field for this partial response
-        print(partial.text)
         response_template["choices"][0]["text"] = partial.text
 
         # Create the SSE formatted string, and then yield
@@ -103,10 +103,9 @@ async def chat_completions(request: Request, authorization: str = Header(None)):
 
     # Extract bot_name (model) and messages from the request body
     bot_name = body.get("model", DEFAULT_MODEL)  # Defaulting to a specific bot if not provided
-    messages = body.get("prompt", [])
+    messages = body.get("prompt", '')
 
-    formatted_messages = [ProtocolMessage(role="bot",
-                                      content=messages)]
+    formatted_messages = [ProtocolMessage(role="user", content=messages)]
 
     async def response_stream() -> AsyncGenerator[str, None]:
         async for response_content in generate_responses_completions(api_key, formatted_messages, bot_name):
