@@ -37,8 +37,7 @@ async def generate_responses_completions(api_key: str, formatted_messages: list,
           {
             "text": "",
             "index": 0,
-            "finish_reason": None,
-            "logprobs": None
+            "finish_reason": "lengths",
           }
         ],
     }
