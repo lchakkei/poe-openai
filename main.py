@@ -24,6 +24,38 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 async def root():
     return {'res': 'pong', 'version': __version__, "time": time()}
 
+async def generate_responses_completions(api_key: str, formatted_messages: list, bot_name: str) -> AsyncGenerator[str, None]:
+    """An async generator to stream responses from the POE API."""
+
+    # Create a base response template
+    response_template = {
+        "id": "chatcmpl-123",
+        "object": "chat.completion.chunk",
+        "created": 1694268190,
+        "model": "gpt-4",
+        "choices": [
+          {
+            "text": "",
+            "index": 0,
+            "finish_reason": "length"
+          }
+        ],
+    }
+
+    async for partial in get_bot_response(messages=formatted_messages, bot_name=bot_name, api_key=api_key,
+                                          base_url=BASE_URL,
+                                          skip_system_prompt=False,
+                                          logit_bias={'24383':-100}):
+
+        # Fill the required field for this partial response
+        print(partial.text)
+        response_template["choices"][0]["text"] = partial.text
+
+        # Create the SSE formatted string, and then yield
+        yield f"data: {json.dumps(response_template)}\n\n"
+
+    # Send termination sequence
+    yield f"data: {json.dumps(response_template)}\n\ndata: [DONE]\n\n"
 
 async def generate_responses(api_key: str, formatted_messages: list, bot_name: str) -> AsyncGenerator[str, None]:
     """An async generator to stream responses from the POE API."""
@@ -61,6 +93,30 @@ async def generate_responses(api_key: str, formatted_messages: list, bot_name: s
 
     yield f"data: {json.dumps(response_template)}\n\ndata: [DONE]\n\n"
 
+@app.post("/v1/completions")
+async def chat_completions(request: Request, authorization: str = Header(None)):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header is missing")
+
+    api_key = authorization.split(" ")[1]  # Assuming the header follows the standard format: "Bearer $API_KEY"
+    body = await request.json()
+
+    # Extract bot_name (model) and messages from the request body
+    bot_name = body.get("model", DEFAULT_MODEL)  # Defaulting to a specific bot if not provided
+    messages = body.get("prompt", [])
+
+    formatted_messages = [ProtocolMessage(role="bot",
+                                      content=messages)]
+
+    async def response_stream() -> AsyncGenerator[str, None]:
+        async for response_content in generate_responses_completions(api_key, formatted_messages, bot_name):
+            # Assuming each response_content is a complete "message" response from the bot.
+            # Adjust according to actual response pattern if needed.
+            yield response_content
+
+    # Stream responses back to the client
+    # Wrap the streamed content to fit the desired response format
+    return StreamingResponse(response_stream(), media_type="application/json")
 
 @app.post("/v1/chat/completions")
 async def chat_completions(request: Request, authorization: str = Header(None)):
