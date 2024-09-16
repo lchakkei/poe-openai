@@ -5,7 +5,8 @@ This project converts Poe's API for AI chatbots into an OpenAI-compatible API fo
 ## Usage
 
 1. Set up the FastAPI server using the provided code.
-2. Use the OpenAI client library to interact with the API:
+2. Get Poe AI API Key from https://poe.com/api_key
+3. Use the OpenAI client library to interact with the API:
 
 ```python
 from openai import OpenAI
